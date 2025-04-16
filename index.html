@@ -2,188 +2,80 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>Minhas Listas</title>
-  <meta name="theme-color" content="#000000">
+  <title>Minhas Listas com Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon-192.png">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="images/icon-192.png">
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-auth-compat.js"></script>
+  <script src="scripts/firebase-init.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f1f1f1;
-      margin: 0;
-      padding: 2rem;
-    }
-    h1 {
-      text-align: center;
-    }
-    form, table, .filtros {
-      max-width: 800px;
-      margin: 1rem auto;
-      background: #fff;
-      padding: 1rem;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    input, select, textarea, button {
-      width: 100%;
-      margin-top: 0.5rem;
-      padding: 0.5rem;
-      font-size: 1rem;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th, td {
-      border-bottom: 1px solid #ccc;
-      padding: 0.5rem;
-      vertical-align: top;
-    }
-    td img {
-      max-width: 80px;
-      max-height: 100px;
-      display: block;
-      margin: auto;
-    }
+    body { font-family: Arial, sans-serif; background: #f1f1f1; margin: 0; padding: 2rem; }
+    h1 { text-align: center; }
+    form, table { max-width: 800px; margin: 1rem auto; background: #fff; padding: 1rem; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, select, textarea, button { width: 100%; margin-top: 0.5rem; padding: 0.5rem; font-size: 1rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #ccc; padding: 0.5rem; }
+    td:last-child { text-align: center; }
+    .auth { text-align: center; margin-bottom: 2rem; }
+    .hidden { display: none; }
   </style>
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("service-worker.js")
-        .then(() => console.log("✔️ Service Worker registrado"))
-        .catch(err => console.error("❌ Service Worker falhou:", err));
-    }
-  </script>
 </head>
 <body>
+  <div class="auth">
+    <div id="user-info" class="hidden">
+      <p>👋 Olá, <span id="user-name"></span>!</p>
+      <button onclick="logout()">Sair</button>
+    </div>
+    <div id="login-area">
+      <button onclick="loginWithGoogle()">Entrar com Google</button>
+    </div>
+  </div>
 
-<h1>🎬 Minhas Listas de Filmes, Séries e Animes</h1>
-
-<form id="form">
-  <label>Título:</label>
-  <input type="text" id="titulo" required>
-
-  <label>Tipo:</label>
-  <select id="tipo">
-    <option value="Filme">Filme</option>
-    <option value="Série">Série</option>
-    <option value="Anime">Anime</option>
-  </select>
-
-  <label>Gênero:</label>
-  <input type="text" id="genero">
-
-  <label>Onde assistir:</label>
-  <input type="text" id="ondeAssistir">
-
-  <label>Status:</label>
-  <select id="status">
-    <option value="Planejando">Planejando</option>
-    <option value="Assistindo">Assistindo</option>
-    <option value="Concluído">Concluído</option>
-  </select>
-
-  <label>Nota (0 a 10):</label>
-  <input type="number" id="nota" min="0" max="10">
-
-  <label>Imagem (URL opcional):</label>
-  <input type="url" id="imagem">
-
-  <label>Comentários:</label>
-  <textarea id="comentario"></textarea>
-
-  <button type="submit">Adicionar à lista</button>
-</form>
-
-<div class="filtros">
-  <label>🔎 Filtrar por tipo/plataforma:</label>
-  <input type="text" id="filtro" placeholder="Ex: Anime ou Netflix">
-  <button type="button" onclick="atualizarTabela(document.getElementById('filtro').value)">Filtrar</button>
-  <button type="button" onclick="exportarCSV()">📤 Exportar CSV</button>
-</div>
-
-<table>
-  <thead>
-    <tr>
-      <th>Título</th>
-      <th>Tipo</th>
-      <th>Gênero</th>
-      <th>Onde ver</th>
-      <th>Status</th>
-      <th>Nota</th>
-      <th>Imagem</th>
-      <th>Comentários</th>
-      <th>❌</th>
-    </tr>
-  </thead>
-  <tbody id="tabela-lista"></tbody>
-</table>
-
-<script>
-  const form = document.getElementById("form");
-  const tabela = document.getElementById("tabela-lista");
-  let lista = JSON.parse(localStorage.getItem("minhaLista")) || [];
-
-  function salvarLista() {
-    localStorage.setItem("minhaLista", JSON.stringify(lista));
-  }
-
-  function atualizarTabela(filtro = "") {
-    tabela.innerHTML = "";
-    lista.forEach((item, index) => {
-      if (filtro && !item.onde.toLowerCase().includes(filtro.toLowerCase()) && item.tipo !== filtro) return;
-      const linha = document.createElement("tr");
-      linha.innerHTML = `
-        <td>${item.titulo}</td>
-        <td>${item.tipo}</td>
-        <td>${item.genero}</td>
-        <td>${item.onde}</td>
-        <td>${item.status}</td>
-        <td>${item.nota}</td>
-        <td><img src="${item.imagem || ''}" alt="Capa"></td>
-        <td>${item.comentario}</td>
-        <td><button onclick="removerItem(${index})">❌</button></td>
-      `;
-      tabela.appendChild(linha);
-    });
-  }
-
-  function removerItem(index) {
-    lista.splice(index, 1);
-    salvarLista();
-    atualizarTabela();
-  }
-
-  form.addEventListener("submit", function(event) {
-    event.preventDefault();
-    const novo = {
-      titulo: titulo.value,
-      tipo: tipo.value,
-      genero: genero.value,
-      onde: ondeAssistir.value,
-      status: status.value,
-      nota: nota.value,
-      imagem: imagem.value,
-      comentario: comentario.value,
-    };
-    lista.push(novo);
-    salvarLista();
-    atualizarTabela();
-    form.reset();
-  });
-
-  function exportarCSV() {
-    const cabecalho = ["Título", "Tipo", "Gênero", "Onde ver", "Status", "Nota", "Imagem", "Comentários"];
-    const linhas = lista.map(i => [i.titulo, i.tipo, i.genero, i.onde, i.status, i.nota, i.imagem, i.comentario]);
-    const csv = [cabecalho, ...linhas].map(l => l.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "minha_lista.csv";
-    link.click();
-  }
-
-  atualizarTabela();
-</script>
-
+  <div id="app" class="hidden">
+    <h1>🎬 Minhas Listas</h1>
+    <form id="form">
+      <label>Título:</label>
+      <input type="text" id="titulo" required>
+      <label>Tipo:</label>
+      <select id="tipo">
+        <option value="Filme">Filme</option>
+        <option value="Série">Série</option>
+        <option value="Anime">Anime</option>
+      </select>
+      <label>Gênero:</label>
+      <input type="text" id="genero">
+      <label>Onde assistir:</label>
+      <input type="text" id="ondeAssistir">
+      <label>Status:</label>
+      <select id="status">
+        <option value="Planejando">Planejando</option>
+        <option value="Assistindo">Assistindo</option>
+        <option value="Concluído">Concluído</option>
+      </select>
+      <label>Nota (0 a 10):</label>
+      <input type="number" id="nota" min="0" max="10">
+      <label>Comentários:</label>
+      <textarea id="comentario"></textarea>
+      <button type="submit">Adicionar à lista</button>
+    </form>
+    <table>
+      <thead>
+        <tr>
+          <th>Título</th>
+          <th>Tipo</th>
+          <th>Gênero</th>
+          <th>Onde ver</th>
+          <th>Status</th>
+          <th>Nota</th>
+          <th>Comentários</th>
+          <th>❌</th>
+        </tr>
+      </thead>
+      <tbody id="tabela-lista"></tbody>
+    </table>
+  </div>
+  <script src="scripts/app.js"></script>
 </body>
 </html>
