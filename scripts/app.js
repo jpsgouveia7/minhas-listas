@@ -1,44 +1,8 @@
-const provider = new firebase.auth.GoogleAuthProvider();
-
-function loginWithGoogle() {
-  firebase.auth().signInWithPopup(provider)
-    .then(result => {
-      const user = result.user;
-      document.getElementById("user-name").textContent = user.displayName;
-      document.getElementById("user-info").classList.remove("hidden");
-      document.getElementById("login-area").classList.add("hidden");
-      document.getElementById("app").classList.remove("hidden");
-    })
-    .catch(error => {
-      console.error("Erro no login:", error);
-      alert("Erro ao fazer login.");
-    });
-}
-
-function logout() {
-  firebase.auth().signOut().then(() => {
-    document.getElementById("user-info").classList.add("hidden");
-    document.getElementById("login-area").classList.remove("hidden");
-    document.getElementById("app").classList.add("hidden");
-  });
-}
-
-firebase.auth().onAuthStateChanged(user => {
-  if (user) {
-    document.getElementById("user-name").textContent = user.displayName;
-    document.getElementById("user-info").classList.remove("hidden");
-    document.getElementById("login-area").classList.add("hidden");
-    document.getElementById("app").classList.remove("hidden");
-  }
-});
 
 const form = document.getElementById("form");
 const tabela = document.getElementById("tabela-lista");
-let lista = JSON.parse(localStorage.getItem("minhaLista")) || [];
-
-function salvarLista() {
-  localStorage.setItem("minhaLista", JSON.stringify(lista));
-}
+let lista = [];
+let userId = null;
 
 function atualizarTabela() {
   tabela.innerHTML = "";
@@ -58,9 +22,25 @@ function atualizarTabela() {
   });
 }
 
+function salvarLista(uid) {
+  db.collection("listas").doc(uid).set({ itens: lista });
+}
+
+function carregarLista(uid) {
+  userId = uid;
+  db.collection("listas").doc(uid).get().then(doc => {
+    if (doc.exists) {
+      lista = doc.data().itens || [];
+    } else {
+      lista = [];
+    }
+    atualizarTabela();
+  });
+}
+
 function removerItem(index) {
   lista.splice(index, 1);
-  salvarLista();
+  salvarLista(userId);
   atualizarTabela();
 }
 
@@ -76,9 +56,7 @@ form.addEventListener("submit", function(event) {
     comentario: comentario.value,
   };
   lista.push(novo);
-  salvarLista();
+  salvarLista(userId);
   atualizarTabela();
   form.reset();
 });
-
-atualizarTabela();
