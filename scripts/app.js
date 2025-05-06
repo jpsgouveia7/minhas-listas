@@ -22,26 +22,27 @@ function atualizarTabela() {
   });
 }
 
-function salvarLista(uid) {
-  db.collection("listas").doc(uid).set({ itens: lista });
+function salvarItem(uid, item) {
+  db.collection("listas").doc(uid).collection("itens").add(item);
 }
 
 function carregarLista(uid) {
   userId = uid;
-  db.collection("listas").doc(uid).get().then(doc => {
-    if (doc.exists) {
-      lista = doc.data().itens || [];
-    } else {
-      lista = [];
-    }
+  db.collection("listas").doc(uid).collection("itens").get().then(snapshot => {
+    lista = [];
+    snapshot.forEach(doc => {
+      lista.push({ id: doc.id, ...doc.data() });
+    });
     atualizarTabela();
   });
 }
 
 function removerItem(index) {
-  lista.splice(index, 1);
-  salvarLista(userId);
-  atualizarTabela();
+  const id = lista[index].id;
+  db.collection("listas").doc(userId).collection("itens").doc(id).delete().then(() => {
+    lista.splice(index, 1);
+    atualizarTabela();
+  });
 }
 
 form.addEventListener("submit", function(event) {
@@ -55,8 +56,8 @@ form.addEventListener("submit", function(event) {
     nota: nota.value,
     comentario: comentario.value,
   };
+  salvarItem(userId, novo);
   lista.push(novo);
-  salvarLista(userId);
   atualizarTabela();
   form.reset();
 });
